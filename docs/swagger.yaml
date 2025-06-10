@@ -1,0 +1,632 @@
+basePath: /api/v1
+definitions:
+  models.Chat:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      messages:
+        items:
+          $ref: '#/definitions/models.Message'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      user_id:
+        type: integer
+    type: object
+  models.ChatWithMessagesResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_message:
+        $ref: '#/definitions/models.Message'
+      message_count:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/models.Message'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.CreateDirectMessageRequest:
+    properties:
+      content:
+        minLength: 1
+        type: string
+      model:
+        type: string
+    required:
+    - content
+    type: object
+  models.CreateMessageRequest:
+    properties:
+      content:
+        minLength: 1
+        type: string
+      model:
+        type: string
+      role:
+        enum:
+        - user
+        - assistant
+        type: string
+    required:
+    - content
+    - role
+    type: object
+  models.Message:
+    properties:
+      chat:
+        $ref: '#/definitions/models.Chat'
+      chat_id:
+        type: integer
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      model:
+        type: string
+      role:
+        description: '"user" or "assistant"'
+        type: string
+      tokens_used:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.Post:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      published:
+        type: boolean
+      title:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      user_id:
+        type: integer
+    type: object
+  models.UpdateChatRequest:
+    properties:
+      is_active:
+        type: boolean
+      title:
+        maxLength: 100
+        minLength: 1
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      posts:
+        items:
+          $ref: '#/definitions/models.Post'
+        type: array
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A simple chat API with user authentication and AI chat management
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Chat API
+  version: "1.0"
+paths:
+  /chats:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all chats belonging to the authenticated user with pagination
+      parameters:
+      - default: 20
+        description: Number of chats to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of chats to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved chats
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user's chats
+      tags:
+      - chats
+  /chats/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a chat and all its associated messages
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted chat
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid chat ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Chat not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a chat
+      tags:
+      - chats
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific chat with all its messages
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved chat
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid chat ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Chat not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific chat
+      tags:
+      - chats
+    put:
+      consumes:
+      - application/json
+      description: Update a chat's title or active status
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Chat update request
+        in: body
+        name: chat
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated chat
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Chat not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a chat
+      tags:
+      - chats
+  /chats/{id}/messages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all messages for a specific chat with pagination
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 50
+        description: Number of messages to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of messages to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved messages
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid chat ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Chat not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get chat messages
+      tags:
+      - messages
+    post:
+      consumes:
+      - application/json
+      description: Add a new message to a specific chat and get streaming LLM response
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Message creation request
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateMessageRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Streaming response
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Chat not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a message
+      tags:
+      - messages
+  /chats/{id}/messages/{messageId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific message from a chat
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Message ID
+        in: path
+        name: messageId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Message not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a message
+      tags:
+      - messages
+    put:
+      consumes:
+      - application/json
+      description: Update the content of a specific message
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Message ID
+        in: path
+        name: messageId
+        required: true
+        type: integer
+      - description: Message content update
+        in: body
+        name: content
+        required: true
+        schema:
+          properties:
+            content:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated message
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Message not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a message
+      tags:
+      - messages
+  /chats/{id}/stream:
+    post:
+      consumes:
+      - application/json
+      description: Streams the Large Language Model's response for a specified chat
+        ID. This endpoint is designed for server-sent events (SSE) and will continuously
+        send chunks of the LLM's response.
+      parameters:
+      - description: The ID of the chat to stream messages for
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Successful streaming response. Chunks of text will be sent
+            continuously.
+          schema:
+            type: string
+        "400":
+          description: Invalid chat ID or request payload
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized - User not authenticated
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error or streaming not supported by the server
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Stream LLM response for a given chat
+      tags:
+      - Chat
+  /chats/direct-message:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new chat and saves the user's first message. The response
+        includes the complete chat data and the initial message.
+      parameters:
+      - description: Request body for creating a direct message
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateDirectMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully created chat and initial message
+          schema:
+            properties:
+              data:
+                $ref: '#/definitions/models.ChatWithMessagesResponse'
+              success:
+                type: boolean
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized - User not authenticated
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new chat with an initial user message
+      tags:
+      - Chat
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
