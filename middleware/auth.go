@@ -1,37 +1,42 @@
 package middleware
 
 import (
+	"kapi/utils"
+	"log"
 	"net/http"
 	"strings"
 
-	"kapi/utils"
-
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 func AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			c.Abort()
+		var token string
+		if websocket.IsWebSocketUpgrade(c.Request) {
+			token = c.Query("token")
+			log.Printf("WebSocket token from query: %s", token[:10]+"...")
+		} else {
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+				token = authHeader[7:]
+			}
+		}
+		
+		if token == "" {
+			log.Println("No token provided")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No token provided"})
 			return
 		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
-			c.Abort()
-			return
-		}
-
-		userID, err := utils.ValidateJWT(tokenString)
+		
+		userID, err := utils.ValidateJWT(token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			c.Abort()
+			log.Printf("Token validation failed: %v", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
-
+		
+		log.Printf("Token validated successfully for user: %v", userID)
 		c.Set("user_id", userID)
 		c.Next()
 	}

@@ -7,9 +7,11 @@ import (
 	"kapi/config"
 	"kapi/controllers"
 	"kapi/database"
+	"kapi/handlers"
 	"kapi/middleware"
 	"kapi/models"
 	"kapi/routes"
+	"kapi/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -60,11 +62,14 @@ func main() {
 	r.Use(middleware.Logger())
 	r.Use(middleware.ErrorHandler())
 
+	hubService := services.NewHubService()
+
 	userController := controllers.NewUserController(db)
 	authController := controllers.NewAuthController(db)
 	chatController := controllers.NewChatController(db, cfg)
+	wsHandler := handlers.NewWebSocketHandler(hubService)
 
-	routes.SetupRoutes(r, userController, authController, chatController)
+	routes.SetupRoutes(r, userController, authController, chatController, wsHandler)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

@@ -15,12 +15,14 @@ type ChatController struct {
 	db          *gorm.DB
 	cfg         *config.Config
 	chatService *services.ChatService
+	hubService  *services.HubService
 }
 
 func NewChatController(db *gorm.DB, cfg *config.Config) *ChatController {
 	return &ChatController{
 		db:          db,
 		chatService: services.NewChatService(db, cfg.OpenRouterKey),
+		hubService:  services.NewHubService(),
 	}
 }
 
@@ -72,6 +74,8 @@ func (cc *ChatController) CreateDirectMessage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create chat: " + err.Error()})
 		return
 	}
+
+	cc.hubService.BroadcastToUser(userID, "chat_created", chatResponse)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

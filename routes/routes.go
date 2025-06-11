@@ -2,13 +2,14 @@ package routes
 
 import (
 	"kapi/controllers"
+	"kapi/handlers"
 	"kapi/middleware"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine, userController *controllers.UserController, authController *controllers.AuthController, chatController *controllers.ChatController) {
+func SetupRoutes(r *gin.Engine, userController *controllers.UserController, authController *controllers.AuthController, chatController *controllers.ChatController, w *handlers.WebSocketHandler) {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -20,6 +21,7 @@ func SetupRoutes(r *gin.Engine, userController *controllers.UserController, auth
 			auth.POST("/register", authController.Register)
 			auth.POST("/login", authController.Login)
 			auth.GET("/me", middleware.AuthRequired(), authController.Me)
+			auth.GET("/ws", middleware.AuthRequired(), w.HandleWebSocket)
 		}
 
 		users := api.Group("/users")
