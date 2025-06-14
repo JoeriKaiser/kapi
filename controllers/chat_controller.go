@@ -75,7 +75,7 @@ func (cc *ChatController) CreateDirectMessage(c *gin.Context) {
 		return
 	}
 
-	cc.hubService.BroadcastToUser(userID, "chat_created", chatResponse)
+	cc.hubService.BroadcastToUserExceptByClientID(userID, "chat_created", chatResponse, req.ClientID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
