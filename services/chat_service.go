@@ -16,9 +16,9 @@ import (
 )
 
 type ChatService struct {
-	db             *gorm.DB
-	openRouterKey  string
-	openRouterURL  string
+	db            *gorm.DB
+	openRouterKey string
+	openRouterURL string
 }
 
 func NewChatService(db *gorm.DB, openRouterKey string) *ChatService {
@@ -42,9 +42,9 @@ type OpenRouterMessage struct {
 }
 
 type OpenRouterRequest struct {
-	Model    string               `json:"model"`
-	Messages []OpenRouterMessage  `json:"messages"`
-	Stream   bool                 `json:"stream"`
+	Model    string              `json:"model"`
+	Messages []OpenRouterMessage `json:"messages"`
+	Stream   bool                `json:"stream"`
 }
 
 type OpenRouterStreamResponse struct {
@@ -61,8 +61,6 @@ type OpenRouterStreamResponse struct {
 		FinishReason *string `json:"finish_reason"`
 	} `json:"choices"`
 }
-
-
 
 func (cs *ChatService) GetUserChats(userID uint, limit, offset int) ([]models.ChatResponse, error) {
 	var chats []models.Chat
@@ -236,13 +234,14 @@ func (cs *ChatService) CreateMessage(chatID, userID uint, req *models.CreateMess
 	return userMessage, nil
 }
 
-func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, responseChan chan<- string, errorChan chan<- error) {
+func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, responseChan chan<- string, errorChan chan<- error) (*models.Message, error) {
 
 	var chat models.Chat
 	if err := cs.db.Where("id = ? AND user_id = ?", chatID, userID).
 		First(&chat).Error; err != nil {
-		errorChan <- errors.New("chat not found or access denied")
-		return
+		err = errors.New("chat not found or access denied")
+		errorChan <- err
+		return nil, err
 	}
 
 	var messages []models.Message
@@ -250,7 +249,7 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 		Order("created_at ASC").
 		Find(&messages).Error; err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 
 	var openRouterMessages []OpenRouterMessage
@@ -274,13 +273,13 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 	jsonData, err := json.Marshal(openRouterReq)
 	if err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 
 	req, err := http.NewRequest("POST", cs.openRouterURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 
 	fmt.Println("Sending request to OpenRouter with model: " + model)
@@ -289,21 +288,22 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+cs.openRouterKey)
-	req.Header.Set("HTTP-Referer", "http://localhost:8080")
+	req.Header.Set("HTTP-Referer", "http://localhost:8080") // Adjust as per your actual referer
 	req.Header.Set("X-Title", "Your App Name")
 
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		errorChan <- fmt.Errorf("OpenRouter API error: %s", string(body))
-		return
+		err = fmt.Errorf("OpenRouter API error (Status: %d): %s", resp.StatusCode, string(body))
+		errorChan <- err
+		return nil, err
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
@@ -324,6 +324,7 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 
 		var streamResp OpenRouterStreamResponse
 		if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
+			fmt.Printf("Error unmarshalling OpenRouter stream data: %v, data: %s\n", err, data)
 			continue
 		}
 
@@ -336,7 +337,7 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 
 	if err := scanner.Err(); err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 
 	assistantMessage := &models.Message{
@@ -348,16 +349,20 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 
 	if err := cs.db.Create(assistantMessage).Error; err != nil {
 		errorChan <- err
-		return
+		return nil, err
 	}
 
-	cs.db.Model(&chat).Update("updated_at", assistantMessage.CreatedAt)
+	if err := cs.db.Model(&chat).Update("updated_at", assistantMessage.CreatedAt).Error; err != nil {
+		fmt.Printf("Warning: Failed to update chat updated_at for chat %d: %v\n", chatID, err)
+	}
+
+	return assistantMessage, nil
 }
 
-func (cs *ChatService) StreamLLMResponse(chatID, userID uint, model string, responseChan chan<- string, errorChan chan<- error) {
+func (cs *ChatService) StreamLLMResponse(chatID, userID uint, model string, responseChan chan<- string, errorChan chan<- error) (*models.Message, error) {
 	defer close(responseChan)
 	defer close(errorChan)
-	cs.streamLLMResponse(chatID, userID, model, responseChan, errorChan)
+	return cs.streamLLMResponse(chatID, userID, model, responseChan, errorChan)
 }
 
 func (cs *ChatService) GetChatMessages(chatID, userID uint, limit, offset int) ([]models.Message, error) {

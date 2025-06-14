@@ -320,7 +320,7 @@ func (cc *ChatController) DeleteChat(c *gin.Context) {
 // @Security BearerAuth
 // @Router /chats/{id}/messages [post]
 func (cc *ChatController) CreateMessage(c *gin.Context) {
-	userID, exists := cc.getUserID(c)
+	userID, exists := cc.getUserID(c) // Assuming getUserID is a helper function
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
@@ -338,15 +338,17 @@ func (cc *ChatController) CreateMessage(c *gin.Context) {
 		return
 	}
 
-	message, err := cc.chatService.CreateMessage(uint(chatID), userID, &req)
+	userMessage, err := cc.chatService.CreateMessage(uint(chatID), userID, &req)
 	if err != nil {
 		if err.Error() == "chat not found or access denied" {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Chat not found"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create message"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create message: " + err.Error()})
 		}
 		return
 	}
+
+	cc.hubService.BroadcastToUserExceptByClientID(userID, "message_created", userMessage, req.ClientID)
 
 	if req.Role == "user" {
 		c.Header("Content-Type", "text/plain; charset=utf-8")
@@ -359,8 +361,18 @@ func (cc *ChatController) CreateMessage(c *gin.Context) {
 
 		responseChan := make(chan string, 100)
 		errorChan := make(chan error, 1)
+		doneChan := make(chan struct{})
 
-		go cc.chatService.StreamLLMResponse(uint(chatID), userID, req.Model, responseChan, errorChan)
+		go func() {
+			defer close(doneChan)
+			llmMessage, err := cc.chatService.StreamLLMResponse(uint(chatID), userID, req.Model, responseChan, errorChan)
+			if err != nil {
+				return
+			}
+			if llmMessage != nil {
+				cc.hubService.BroadcastToUserExceptByClientID(userID, "message_created", llmMessage, req.ClientID)
+			}
+		}()
 
 		flusher, ok := c.Writer.(http.Flusher)
 		if !ok {
@@ -383,10 +395,14 @@ func (cc *ChatController) CreateMessage(c *gin.Context) {
 					flusher.Flush()
 					return
 				}
+			case <-doneChan:
+				return
+			case <-c.Request.Context().Done():
+				return
 			}
 		}
 	} else {
-		c.JSON(http.StatusCreated, gin.H{"data": message})
+		c.JSON(http.StatusCreated, gin.H{"data": userMessage})
 	}
 }
 

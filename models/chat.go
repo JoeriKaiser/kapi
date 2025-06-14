@@ -37,9 +37,10 @@ type UpdateChatRequest struct {
 }
 
 type CreateMessageRequest struct {
-	Content string `json:"content" binding:"required,min=1"`
-	Role    string `json:"role" binding:"required,oneof=user assistant"`
-	Model   string `json:"model"`
+	Content  string `json:"content" binding:"required,min=1"`
+	Role     string `json:"role" binding:"required,oneof=user assistant"`
+	Model    string `json:"model"`
+	ClientID string `json:"client_id,omitempty"`
 }
 
 type CreateDirectMessageRequest struct {
