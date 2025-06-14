@@ -66,7 +66,7 @@ func main() {
 
 	userController := controllers.NewUserController(db)
 	authController := controllers.NewAuthController(db)
-	chatController := controllers.NewChatController(db, cfg)
+	chatController := controllers.NewChatController(db, cfg, hubService)
 	wsHandler := handlers.NewWebSocketHandler(hubService)
 
 	routes.SetupRoutes(r, userController, authController, chatController, wsHandler)

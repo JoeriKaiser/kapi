@@ -41,13 +41,10 @@ func (h *HubService) Run() {
 
 func (h *HubService) registerClient(client *models.Client) {
     h.hub.Clients[client] = true
-    
     if h.hub.UserClients[client.UserID] == nil {
         h.hub.UserClients[client.UserID] = []*models.Client{}
     }
     h.hub.UserClients[client.UserID] = append(h.hub.UserClients[client.UserID], client)
-    
-    log.Printf("Client registered for user: %s", client.UserID)
 }
 
 func (h *HubService) unregisterClient(client *models.Client) {
@@ -62,12 +59,10 @@ func (h *HubService) unregisterClient(client *models.Client) {
                     break
                 }
             }
-
-						if len(h.hub.UserClients[client.UserID]) == 0 {
+            if len(h.hub.UserClients[client.UserID]) == 0 {
                 delete(h.hub.UserClients, client.UserID)
             }
         }
-        
         log.Printf("Client unregistered for user: %s", client.UserID)
     }
 }
@@ -84,7 +79,7 @@ func (h *HubService) broadcastToAll(message []byte) {
 }
 
 func (h *HubService) BroadcastToUser(userID uint, messageType string, data interface{}) {
-		userIDStr := fmt.Sprintf("%d", userID)
+    userIDStr := fmt.Sprintf("%d", userID)
     wsMessage := models.WSMessage{
         Type: messageType,
         Data: data,

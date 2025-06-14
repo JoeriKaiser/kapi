@@ -18,11 +18,11 @@ type ChatController struct {
 	hubService  *services.HubService
 }
 
-func NewChatController(db *gorm.DB, cfg *config.Config) *ChatController {
+func NewChatController(db *gorm.DB, cfg *config.Config, hubService *services.HubService) *ChatController {
 	return &ChatController{
 		db:          db,
 		chatService: services.NewChatService(db, cfg.OpenRouterKey),
-		hubService:  services.NewHubService(),
+		hubService:  hubService,
 	}
 }
 
