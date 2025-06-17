@@ -22,7 +22,7 @@ import (
 	_ "kapi/docs"
 )
 
-// @title Chat API
+// @title Jin API
 // @version 1.0
 // @description A simple chat API with user authentication and AI chat management
 // @termsOfService http://swagger.io/terms/
@@ -31,8 +31,8 @@ import (
 // @contact.url http://www.swagger.io/support
 // @contact.email support@swagger.io
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
 
 // @host localhost:8080
 // @BasePath /api/v1
