@@ -16,13 +16,16 @@ type ChatController struct {
 	cfg         *config.Config
 	chatService *services.ChatService
 	hubService  *services.HubService
+	userService *services.UserService
 }
 
 func NewChatController(db *gorm.DB, cfg *config.Config, hubService *services.HubService) *ChatController {
+	userService := services.NewUserService(db)
 	return &ChatController{
 		db:          db,
-		chatService: services.NewChatService(db, cfg.OpenRouterKey),
+		chatService: services.NewChatService(db, cfg.OpenRouterKey, userService),
 		hubService:  hubService,
+		userService: userService,
 	}
 }
 
@@ -42,6 +45,17 @@ func (cc *ChatController) CreateDirectMessage(c *gin.Context) {
 	userID, exists := cc.getUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	hasKey, err := cc.userService.HasOpenRouterKey(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify API key"})
+		return
+	}
+
+	if !hasKey {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please add your OpenRouter API key first"})
 		return
 	}
 

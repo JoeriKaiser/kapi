@@ -8,17 +8,18 @@ import (
 )
 
 type User struct {
-	ID        uint           `json:"id" gorm:"primaryKey"`
-	Email     string         `json:"email" gorm:"uniqueIndex;not null"`
-	Username  string         `json:"username" gorm:"uniqueIndex;not null"`
-	Password  string         `json:"-" gorm:"not null"`
-	FirstName string         `json:"first_name"`
-	LastName  string         `json:"last_name"`
-	IsActive  bool           `json:"is_active" gorm:"default:true"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
-	Posts     []Post         `json:"posts,omitempty" gorm:"foreignKey:UserID"`
+	ID            uint           `json:"id" gorm:"primaryKey"`
+	Email         string         `json:"email" gorm:"uniqueIndex;not null"`
+	Username      string         `json:"username" gorm:"uniqueIndex;not null"`
+	Password      string         `json:"-" gorm:"not null"`
+	FirstName     string         `json:"first_name"`
+	LastName      string         `json:"last_name"`
+	OpenRouterKey string         `json:"-" gorm:"column:openrouter_key"`
+	IsActive      bool           `json:"is_active" gorm:"default:true"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+	Posts         []Post         `json:"posts,omitempty" gorm:"foreignKey:UserID"`
 }
 
 type CreateUserRequest struct {
@@ -38,6 +39,10 @@ type UpdateUserRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Username  string `json:"username"`
+}
+
+type UpdateOpenRouterKeyRequest struct {
+	OpenRouterKey string `json:"openrouter_key" binding:"required"`
 }
 
 func (u *User) HashPassword() error {

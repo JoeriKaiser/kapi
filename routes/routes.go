@@ -31,6 +31,10 @@ func SetupRoutes(r *gin.Engine, userController *controllers.UserController, auth
 			users.GET("/:id", userController.GetUser)
 			users.PUT("/:id", userController.UpdateUser)
 			users.DELETE("/:id", userController.DeleteUser)
+
+			users.PUT("/openrouter-key", userController.UpdateOpenRouterKey)
+			users.GET("/openrouter-key/status", userController.GetOpenRouterKeyStatus)
+			users.DELETE("/openrouter-key", userController.DeleteOpenRouterKey)
 		}
 
 		directMessages := api.Group("/messages")

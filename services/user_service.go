@@ -78,3 +78,26 @@ func (s *UserService) UpdateUser(id uint, req *models.UpdateUserRequest) (*model
 func (s *UserService) DeleteUser(id uint) error {
 	return s.db.Delete(&models.User{}, id).Error
 }
+
+func (us *UserService) UpdateOpenRouterKey(userID uint, key string) error {
+	result := us.db.Model(&models.User{}).Where("id = ?", userID).Update("openrouter_key", key)
+	return result.Error
+}
+
+func (us *UserService) GetUserOpenRouterKey(userID uint) (string, error) {
+	var user models.User
+	result := us.db.Select("openrouter_key").Where("id = ?", userID).First(&user)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	return user.OpenRouterKey, nil
+}
+
+func (us *UserService) HasOpenRouterKey(userID uint) (bool, error) {
+	var count int64
+	result := us.db.Model(&models.User{}).Where("id = ? AND openrouter_key IS NOT NULL AND openrouter_key != ''", userID).Count(&count)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return count > 0, nil
+}

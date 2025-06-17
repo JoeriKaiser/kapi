@@ -17,15 +17,17 @@ import (
 
 type ChatService struct {
 	db            *gorm.DB
-	openRouterKey string
+	defaultKey    string
 	openRouterURL string
+	userService   *UserService
 }
 
-func NewChatService(db *gorm.DB, openRouterKey string) *ChatService {
+func NewChatService(db *gorm.DB, defaultKey string, userService *UserService) *ChatService {
 	return &ChatService{
 		db:            db,
-		openRouterKey: openRouterKey,
+		defaultKey:    defaultKey,
 		openRouterURL: "https://openrouter.ai/api/v1/chat/completions",
+		userService:   userService,
 	}
 }
 
@@ -282,12 +284,17 @@ func (cs *ChatService) streamLLMResponse(chatID, userID uint, model string, resp
 		return nil, err
 	}
 
+	key, err := cs.getOpenRouterKey(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get OpenRouter key: %v", err)
+	}
+
 	fmt.Println("Sending request to OpenRouter with model: " + model)
-	fmt.Println("Sending request to OpenRouter with key: " + cs.openRouterKey)
+	fmt.Println("Sending request to OpenRouter with key: " + key)
 	fmt.Println("Sending request to OpenRouter with url: " + cs.openRouterURL)
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+cs.openRouterKey)
+	req.Header.Set("Authorization", "Bearer "+key)
 	req.Header.Set("HTTP-Referer", "http://localhost:8080") // Adjust as per your actual referer
 	req.Header.Set("X-Title", "Your App Name")
 
@@ -472,4 +479,23 @@ func (cs *ChatService) CreateChatWithMessageSync(userID uint, req *models.Create
 	}
 
 	return response, nil
+}
+
+func (cs *ChatService) getOpenRouterKey(userID uint) (string, error) {
+	userKey, err := cs.userService.GetUserOpenRouterKey(userID)
+	if err != nil {
+		return "", err
+	}
+
+	// If user has their own key, use it
+	if userKey != "" {
+		return userKey, nil
+	}
+
+	// Fall back to default key if available
+	if cs.defaultKey != "" {
+		return cs.defaultKey, nil
+	}
+
+	return "", fmt.Errorf("no OpenRouter key available")
 }
