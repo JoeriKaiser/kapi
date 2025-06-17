@@ -80,7 +80,16 @@ func (s *UserService) DeleteUser(id uint) error {
 }
 
 func (us *UserService) UpdateOpenRouterKey(userID uint, key string) error {
-	result := us.db.Model(&models.User{}).Where("id = ?", userID).Update("openrouter_key", key)
+	var user models.User
+	if err := us.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		return err
+	}
+
+	if err := user.EncryptOpenRouterKey(key); err != nil {
+		return err
+	}
+
+	result := us.db.Model(&user).Update("openrouter_key", user.OpenRouterKey)
 	return result.Error
 }
 
@@ -90,7 +99,8 @@ func (us *UserService) GetUserOpenRouterKey(userID uint) (string, error) {
 	if result.Error != nil {
 		return "", result.Error
 	}
-	return user.OpenRouterKey, nil
+
+	return user.DecryptOpenRouterKey()
 }
 
 func (us *UserService) HasOpenRouterKey(userID uint) (bool, error) {
