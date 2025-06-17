@@ -43,13 +43,13 @@ import (
 // @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
-  if wd, err := os.Getwd(); err == nil {
-      log.Printf("Current working directory: %s", wd)
-  }
+	if wd, err := os.Getwd(); err == nil {
+		log.Printf("Current working directory: %s", wd)
+	}
 
-  if err := godotenv.Load(); err != nil {
-      log.Printf("Error loading .env file: %v", err)
-  }
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	}
 
 	db := database.Connect()
 	db.AutoMigrate(&models.User{}, &models.Post{}, &models.Chat{}, &models.Message{})
@@ -75,7 +75,6 @@ func main() {
 
 	log.Println("Server starting on :8080")
 	log.Println("Swagger docs available at: http://localhost:8080/swagger/index.html")
-	r.Run(":8080")
 
 	port := os.Getenv("PORT")
 	if port == "" {
