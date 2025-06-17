@@ -2,6 +2,10 @@
 
 This repository contains the Go backend for our LLM chat application, created for the T3 Cloneathon. It provides backend API for the frontend application.
 
+## Link to frontend
+
+[https://github.com/JoeriKaiser/kchat](https://github.com/JoeriKaiser/kchat)
+
 ## Tech Stack
 
 -   **Language:** [Go](https://golang.org/)
